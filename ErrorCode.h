@@ -1,0 +1,62 @@
+#ifndef _ERROR_CODE_H_
+#define _ERROR_CODE_H_
+
+#define SUCCESS                  0
+#define OK                       0
+
+#define IO_ERR                   2
+
+#define READ_DEV_INFO_ERROR        -3
+#define SCSI_STRUCT_ERROR          -4
+#define SEND_INQUIRY_ERROR         -5
+#define MOVE_MEDIUM_ERROR          -6
+#define SCSI_REWIND_ERROR          -7
+#define ERR_DRIVE_BUSY       -8
+#define ERR_NO_MORE       -9
+#define ERR_INVALID_DATA -10
+#define ERR_LISTEN_PORT_FAIL -11
+#define ERR_NET_ERROR -12
+#define ERR_TAPE_NOT_FOUND -13
+
+#define ERR_INVALID_BLOCK_SIZE -20
+
+#define ERR_INVALID_DATA_SIZE  -21
+
+#define ERR_FILE_END  -40
+#define ERR_TAPE_END  -41
+#define ERR_RECOVER_FAIL  -42
+#define ERR_NOT_READY  -43
+#define ERR_MEDIA_ERROR  -44
+#define ERR_HARDWARE_ERROR  -45
+#define ERR_ILLEGAL_REQUEST  -46
+#define ERR_UNIT_ATTENTION  -47
+#define ERR_WRITE_PROTECT  -48
+#define ERR_BLANK_CHECK  -49
+#define ERR_COPY_ABORTED  -50
+#define ERR_ABORTED_COMMAND  -51
+#define ERR_VOLUME_OVERFLOW  -52
+#define ERR_ILLEGAL_LENGTH -53
+#define ERR_SOURCE_EMPTY  -54
+#define ERR_DESTINATION_FULL -55
+#define ERR_CLEAN_TAPE_INSTALLED -56
+#define ERR_TAPE_NOT_PRESENT -57
+
+#define ERR_TIMEOUT  -101
+#define ERR_EVENT_FAIL -102
+#define ERR_FAIL_THREAD -103
+#define ERR_FILE_NOT_FOUND -104
+#define ERR_OPEN_FILE_FAIL -105
+#define ERR_READ_FILE_FAIL -106
+#define ERR_WRITE_FILE_FAIL -107
+#define ERR_SEEK_FILE_FAIL -108
+#define ERR_FLUSH_FILE_FAIL -109
+#define ERR_OPERATE_FILE_FAIL -110
+#define ERR_DELETE_FILE_FAIL -111
+#define ERR_CREATE_FOLDER_FAIL -112
+#define ERR_LOAD_LIB_FAIL -113
+#define ERR_DELETE_FOLDER_FAIL -114
+
+#define ERR_CATALOG_NULL    -115
+#define ERR_CATALOG_NOT_FIND -116
+#define ERR_INVALID_PARA       -117
+#endif

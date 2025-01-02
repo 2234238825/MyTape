@@ -29,7 +29,15 @@ void CScsiLibrary::print_sense_buffer(unsigned char *sense_buffer, int len)
     std::cout << std::dec << std::endl;
 }
 
-
+/*!
+ *
+ * @param element_type 0x00 All element types reported, 0x01 Medium transport element (accessor), 0x02 Storage element, 0x03 Import/Export element, 0x04 Data transfer element
+ * @param starting_element_address
+ * @param num_elements
+ * @param CDB_byte_6
+ * @param voltag_bit
+ * @return
+ */
 int
 CScsiLibrary::read_element_status(char element_type, int starting_element_address, int num_elements, char CDB_byte_6, bool voltag_bit)
 {
@@ -335,6 +343,16 @@ int CScsiLibrary::print_response_data(int cdb_code,int page_code)
     return 0;
 }
 
+
+/*!
+ *
+ * @param page_code 00h - Supported Vital Product Data pages (this list) \n
+ *                  80h - Unit Serial Number page                        \n
+ *                  83h – Device Identification page                     \n
+ *                  85h - Management Network Addresses page              \n
+ *                  C8h - Vendor Specific Device Capabilities page       \n
+ * @return
+ */
 int CScsiLibrary::get_query(unsigned char page_code)
 {
     // 打开设备
@@ -425,5 +443,16 @@ void CScsiLibrary::setCScsiDrive(CScsiDrive *drive)
 CScsiDrive *CScsiLibrary::getDrive(int iIndexDrive)
 {
     return m_Drives[iIndexDrive];
+}
+
+const char *CScsiLibrary::GetLibrarySerialNumber()
+{
+    return m_LibrarySerialNumber;
+}
+
+int CScsiLibrary::initAllSlot()
+{
+    read_element_status(0x02,m_ElementStruct.addr_slot,m_ElementStruct.num_slot,0,true);
+    return 0;
 }
 

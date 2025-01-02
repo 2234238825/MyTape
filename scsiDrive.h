@@ -12,13 +12,6 @@
 #include "kfcStruct.h"
 #include "ErrorCode.h"
 using namespace std;
-#define MODE_SELECT_CMD 0x15    // SCSI MODE SELECT 命令操作码
-#define WRITE_BUFFER_SIZE 65536   // 定义写缓冲区大小
-#define SCSI_WRITE_6_COMMAND 0x0A  // SCSI 6字节WRITE命令的操作码
-#define SENSE_BUFFER_LEN 32      // Sense Buffer 长度
-#define READ_BUFFER_SIZE 65536    // 定义读缓冲区大小
-#define SCSI_READ_6_COMMAND 0x08  // SCSI 6字节READ命令的操作码
-
 
 class CScsiDrive
 {
@@ -30,11 +23,15 @@ public:
     }
     int setDeviceCommandStructAndDeviceInfo(SCSI_COMMAND_STRUCT commandStruct,DEVICE_INFO deviceInfo);
     int set_scsi_block_size(unsigned int block_size = 65536);
+    int scsi_write_fileMarks();
+    int scsi_test_unit_raedy();
+    int scsi_space_blocks(int ulBlocks);
+    int scsi_space_fileMarks(int ulnum);
+    int scsi_read_pos(int &ulposition);
     int get_drive_block_size(int *block_size);
-    int write_block(char *buffer,int blocks);
+    int write_block(char *buffer, int blocks);
     int read_block(char *buffer, int blocks);
     int get_query();
-    int read_positon();
     int seek_block();
     int load();
     int unload;

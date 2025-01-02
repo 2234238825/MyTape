@@ -56,10 +56,11 @@ public:
     int get_slot_count();
     int get_drive_count();
     int get_IE_slot_count();
-    TapeInfo *getSlotInfo(int iIndexSlot);
     stDriveInfo *getDriveInfo(int iIndexDrive);
     CScsiDrive * getDrive(int iIndexDrive);
+    const char* GetLibrarySerialNumber();
 
+    int initAllSlot();
 private:
     void print_sense_buffer(unsigned char* sense_buffer, int len);
     int new_buffer(int buffer_size);

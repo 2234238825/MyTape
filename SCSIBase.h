@@ -13,10 +13,9 @@
 class SCSIBase
 {
 public:
-
     int SCSI_MODE_SENSE();
     int SCSI_MODE_SELECT();
-
+    int SCSI_WRITE_FILE_MASKS();
 };
 
 

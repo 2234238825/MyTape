@@ -67,6 +67,13 @@ int CScsiDrive::set_scsi_block_size(unsigned int block_size)
     return 0;
 }
 
+/*!
+ *
+ * @param buffer
+ * @param blocks
+ * @warning io_hdr.dxfer_len will limit the data received device(tape), otherwise it could report errors if io_hdr.dxfer_len > length of buffer\n
+ * so it's better to make them equal
+ */
 int CScsiDrive::write_block(char *buffer,int blocks)
 {
     // 打开设备
@@ -77,9 +84,7 @@ int CScsiDrive::write_block(char *buffer,int blocks)
     }
 
     // 要写入的数据
-    unsigned char write_buffer[WRITE_BUFFER_SIZE];
-    for(int i = 0;i<WRITE_BUFFER_SIZE;i++)
-        write_buffer[i] = i%26 + 'a';
+
     //memset(write_buffer, 'A', sizeof(write_buffer));  // 填充数据'A'
 
     // SCSI CDB (6字节写命令)
@@ -104,8 +109,8 @@ int CScsiDrive::write_block(char *buffer,int blocks)
     io_hdr.cmd_len = sizeof(cdb);              // CDB的长度
     io_hdr.mx_sb_len = sizeof(sense_buffer);    // 没有错误返回信息缓冲区
     io_hdr.dxfer_direction = SG_DXFER_TO_DEV;  // 数据传输方向：主机到设备
-    io_hdr.dxfer_len = sizeof(write_buffer);   // 数据缓冲区长度
-    io_hdr.dxferp = write_buffer;              // 指向数据缓冲区
+    io_hdr.dxfer_len = WRITE_BUFFER_SIZE*blocks;   // 数据缓冲区长度
+    io_hdr.dxferp = buffer;              // 指向数据缓冲区
     io_hdr.cmdp = cdb;                         // 指向CDB
     io_hdr.sbp = sense_buffer;                   // 指向Sense Buffer
     io_hdr.timeout = 5000;                     // 超时时间：5秒
@@ -129,7 +134,7 @@ int CScsiDrive::write_block(char *buffer,int blocks)
         return 1;
     }
 
-    std::cout << "成功写入 " << WRITE_BUFFER_SIZE << " 字节到磁带设备" << std::endl;
+    std::cout << "成功写入 " << WRITE_BUFFER_SIZE*blocks  << " 字节到磁带设备" << std::endl;
 
     // 关闭设备
     close(fd);
@@ -137,6 +142,13 @@ int CScsiDrive::write_block(char *buffer,int blocks)
 
 }
 
+/*!
+ *
+ * @param buffer
+ * @param blocks
+ * @return errorCode
+ * @warning blocks must be set correctly, otherwise, an error will occur
+ */
 int CScsiDrive::read_block(char *buffer, int blocks)
 {
     // 打开设备
@@ -172,8 +184,8 @@ int CScsiDrive::read_block(char *buffer, int blocks)
     io_hdr.cmd_len = sizeof(cdb);              // CDB的长度
     io_hdr.mx_sb_len = sizeof(sense_buffer);    // 没有错误返回信息缓冲区
     io_hdr.dxfer_direction = SG_DXFER_FROM_DEV;  // 数据传输方向：设备到主机
-    io_hdr.dxfer_len = sizeof(read_buffer);    // 数据缓冲区长度
-    io_hdr.dxferp = read_buffer;               // 指向数据缓冲区
+    io_hdr.dxfer_len = WRITE_BUFFER_SIZE*blocks;    // 数据缓冲区长度
+    io_hdr.dxferp = buffer;               // 指向数据缓冲区
     io_hdr.cmdp = cdb;                         // 指向CDB
     io_hdr.sbp = sense_buffer;                   // 指向Sense Buffer
     io_hdr.timeout = 5000;                     // 超时时间：5秒
@@ -198,10 +210,8 @@ int CScsiDrive::read_block(char *buffer, int blocks)
     }
 
     // 输出读取到的数据
-    std::cout << "成功读取 " << READ_BUFFER_SIZE << " 字节的数据:" << std::endl;
+    std::cout << "成功读取 " << READ_BUFFER_SIZE*blocks << " 字节的数据:" << std::endl;
 
-    std::cout.write(reinterpret_cast<char*>(read_buffer), READ_BUFFER_SIZE);
-    std::cout << std::endl;
 
     // 关闭设备
     close(fd);
@@ -401,6 +411,285 @@ int CScsiDrive::rewind()
 int CScsiDrive::get_drive_block_size(int *block_size)
 {
 
+    return 0;
+}
+
+int CScsiDrive::scsi_space_blocks(int ulBlocks)
+{
+    int fd = open(m_CommandStruct.devicePath, O_RDWR);
+    if (fd < 0)
+    {
+        return -1;
+    }
+
+    // SCSI SPACE command (CDB = 0x11)
+    unsigned char cdb[6] = {0x11, 0x00, 0x00, 0x00, 0x01, 0x00};
+    // 0x00 in cdb[1] means SPACE by blocks, cdb[4:2] specifies the number of blocks to skip.
+    cdb[2] = ulBlocks >> 16;
+    cdb[3] = ulBlocks >> 8;
+    cdb[4] = ulBlocks;
+    // SCSI generic (SG) I/O structure
+    sg_io_hdr_t io_hdr;
+    memset(&io_hdr, 0, sizeof(sg_io_hdr_t));
+
+    unsigned char sense_buffer[32]; // Buffer to store sense data
+
+    // Configure the SCSI command
+    io_hdr.interface_id = 'S'; // Always 'S'
+    io_hdr.cmd_len = sizeof(cdb); // Command length
+    io_hdr.mx_sb_len = sizeof(sense_buffer); // Maximum sense buffer length
+    io_hdr.dxfer_direction = SG_DXFER_NONE; // No data transfer for SPACE command
+    io_hdr.cmdp = cdb; // Pointer to the CDB
+    io_hdr.sbp = sense_buffer; // Pointer to sense buffer
+    io_hdr.timeout = 5000; // Timeout in milliseconds
+
+    if (ioctl(fd, SG_IO, &io_hdr) < 0)
+    {
+        perror("SCSI REPORT ELEMENT STATUS command failed");
+        return IO_ERR;
+    }
+
+    if ((io_hdr.info & SG_INFO_OK_MASK) != SG_INFO_OK)
+    {
+        std::cerr << "SCSI 命令执行错误" << std::endl;
+        if (io_hdr.sb_len_wr > 0)
+        {
+            std::cerr << "Sense Data 错误码: ";
+            print_sense_buffer(sense_buffer, io_hdr.sb_len_wr); // 输出 Sense Buffer
+        }
+        close(fd);
+        return 1;
+    }
+    close(fd);
+    return 0;
+}
+
+int CScsiDrive::scsi_space_fileMarks(int ulnum)
+{
+    int fd = open(m_CommandStruct.devicePath, O_RDWR);
+    if (fd < 0)
+    {
+        return -1;
+    }
+
+    // SCSI SPACE command (CDB = 0x11)
+    unsigned char cdb[6] = {0x11, 0x01, 0x00, 0x00, 0x01, 0x00};
+    // 0x01 in cdb[1] means SPACE by fileMarks, cdb[4:2] specifies the number of blocks to skip.
+    cdb[2] = ulnum >> 16;
+    cdb[3] = ulnum >> 8;
+    cdb[4] = ulnum;
+    // SCSI generic (SG) I/O structure
+    sg_io_hdr_t io_hdr;
+    memset(&io_hdr, 0, sizeof(sg_io_hdr_t));
+
+    unsigned char sense_buffer[32]; // Buffer to store sense data
+
+    // Configure the SCSI command
+    io_hdr.interface_id = 'S'; // Always 'S'
+    io_hdr.cmd_len = sizeof(cdb); // Command length
+    io_hdr.mx_sb_len = sizeof(sense_buffer); // Maximum sense buffer length
+    io_hdr.dxfer_direction = SG_DXFER_NONE; // No data transfer for SPACE command
+    io_hdr.cmdp = cdb; // Pointer to the CDB
+    io_hdr.sbp = sense_buffer; // Pointer to sense buffer
+    io_hdr.timeout = 5000; // Timeout in milliseconds
+
+    if (ioctl(fd, SG_IO, &io_hdr) < 0)
+    {
+        perror("SCSI REPORT ELEMENT STATUS command failed");
+        return IO_ERR;
+    }
+
+    if ((io_hdr.info & SG_INFO_OK_MASK) != SG_INFO_OK)
+    {
+        std::cerr << "SCSI 命令执行错误" << std::endl;
+        if (io_hdr.sb_len_wr > 0)
+        {
+            std::cerr << "Sense Data 错误码: ";
+            CScsiDrive::print_sense_buffer(sense_buffer, io_hdr.sb_len_wr); // 输出 Sense Buffer
+        }
+        close(fd);
+        return 1;
+    }
+    close(fd);
+    return 0;
+}
+
+int CScsiDrive::scsi_read_pos(int &ulposition)
+{
+    int fd = open(m_CommandStruct.devicePath, O_RDWR);
+    if (fd < 0)
+    {
+        perror("Failed to open tape device");
+        return -1;
+    }
+
+    struct sg_io_hdr io_hdr;
+    unsigned char cdb[10] = {};
+    unsigned char sense_buffer[32] = {};
+    unsigned char response_buffer[80] = {};
+
+    memset(&io_hdr, 0, sizeof(io_hdr));
+    memset(cdb, 0, sizeof(cdb));
+    memset(sense_buffer, 0, sizeof(sense_buffer));
+
+    cdb[0] = 0x34;
+    cdb[1] = 0x00;
+    cdb[2] = 0x00;
+    cdb[3] = 0x00;
+    cdb[4] = 0x00;
+    cdb[5] = 0x00;
+
+    io_hdr.interface_id = 'S';
+    io_hdr.cmd_len = sizeof(cdb);
+    io_hdr.mx_sb_len = sizeof(sense_buffer);
+    io_hdr.dxfer_direction = SG_DXFER_FROM_DEV;  // 数据从设备传输到主机
+    io_hdr.dxfer_len = 80;  // 返回的数据缓冲区长度
+    io_hdr.dxferp = response_buffer;  // 返回数据的缓冲区指针
+    io_hdr.cmdp = cdb;  // 指向CDB
+    io_hdr.sbp = sense_buffer;  // 传感器缓冲区
+    io_hdr.timeout = 3000;  // 设置超时时间，单位为毫秒
+
+    if (ioctl(fd, SG_IO, &io_hdr) < 0)
+    {
+        perror("SCSI REPORT ELEMENT STATUS command failed");
+        return IO_ERR;
+    }
+
+    if ((io_hdr.info & SG_INFO_OK_MASK) != SG_INFO_OK)
+    {
+        std::cerr << "SCSI 命令执行错误" << std::endl;
+        if (io_hdr.sb_len_wr > 0)
+        {
+            std::cerr << "Sense Data 错误码: ";
+            CScsiDrive::print_sense_buffer(sense_buffer, io_hdr.sb_len_wr); // 输出 Sense Buffer
+        }
+        close(fd);
+        return 1;
+    }
+    unsigned int ulBlockAddress = 0, ulTemp = 0;
+    using ULONG = unsigned long;
+    ulBlockAddress = (ULONG) response_buffer[4];
+    ulBlockAddress <<= 24;
+
+    ulTemp = (ULONG) response_buffer[5];
+    ulTemp <<= 16;
+    ulBlockAddress |= ulTemp;
+
+    ulTemp = (ULONG) response_buffer[6];
+    ulTemp <<= 8;
+    ulBlockAddress |= ulTemp;
+
+    ulBlockAddress |= (ULONG) response_buffer[7];
+    ulposition = ulBlockAddress;
+
+    close(fd);
+    return 0;
+}
+
+int CScsiDrive::scsi_write_fileMarks()
+{
+    int fd = open(m_CommandStruct.devicePath, O_RDWR);
+    if (fd < 0)
+    {
+        perror("Failed to open tape device");
+        return -1;
+    }
+
+    struct sg_io_hdr io_hdr;
+    unsigned char cdb[6];
+    unsigned char sense_buffer[32];
+    unsigned char response_buffer[80] = {};
+
+
+    memset(&io_hdr, 0, sizeof(io_hdr));
+    memset(cdb, 0, sizeof(cdb));
+    memset(sense_buffer, 0, sizeof(sense_buffer));
+
+    cdb[0] = 0x10;
+    cdb[1] = 0x00;
+    cdb[2] = 0x00;
+    cdb[3] = 0x00;
+    cdb[4] = 0x01;
+    cdb[5] = 0x00;
+
+    io_hdr.interface_id = 'S';
+    io_hdr.cmd_len = sizeof(cdb);
+    io_hdr.mx_sb_len = sizeof(sense_buffer);
+    io_hdr.dxfer_direction = SG_DXFER_FROM_DEV;  // 数据从设备传输到主机
+    io_hdr.dxfer_len = 80;  // 返回的数据缓冲区长度
+    io_hdr.dxferp = response_buffer;  // 返回数据的缓冲区指针
+    io_hdr.cmdp = cdb;  // 指向CDB
+    io_hdr.sbp = sense_buffer;  // 传感器缓冲区
+    io_hdr.timeout = 3000;  // 设置超时时间，单位为毫秒
+
+    if (ioctl(fd, SG_IO, &io_hdr) < 0)
+    {
+        perror("SCSI REPORT ELEMENT STATUS command failed");
+        return IO_ERR;
+    }
+
+    if ((io_hdr.info & SG_INFO_OK_MASK) != SG_INFO_OK)
+    {
+        std::cerr << "SCSI 命令执行错误" << std::endl;
+        if (io_hdr.sb_len_wr > 0)
+        {
+            std::cerr << "Sense Data 错误码: ";
+            CScsiDrive::print_sense_buffer(sense_buffer, io_hdr.sb_len_wr); // 输出 Sense Buffer
+        }
+        close(fd);
+        return 1;
+    }
+    close(fd);
+    return 0;
+}
+
+int CScsiDrive::scsi_test_unit_raedy()
+{
+    int fd = open(m_CommandStruct.devicePath, O_RDWR);
+    if (fd < 0)
+    {
+        return -1;
+    }
+    unsigned char cdb[6];
+    cdb[0] = SCSI_TUR;
+    cdb[1] = 0x00;
+    cdb[2] = 0x00;
+    cdb[3] = 0x00;
+    cdb[4] = 0x00;
+    cdb[5] = 0x00;
+
+    sg_io_hdr_t io_hdr;
+    memset(&io_hdr, 0, sizeof(sg_io_hdr_t));
+
+    unsigned char sense_buffer[32]; // Buffer to store sense data
+
+    // Configure the SCSI command
+    io_hdr.interface_id = 'S'; // Always 'S'
+    io_hdr.cmd_len = sizeof(cdb); // Command length
+    io_hdr.mx_sb_len = sizeof(sense_buffer); // Maximum sense buffer length
+    io_hdr.dxfer_direction = SG_DXFER_NONE; // No data transfer for SPACE command
+    io_hdr.cmdp = cdb; // Pointer to the CDB
+    io_hdr.sbp = sense_buffer; // Pointer to sense buffer
+    io_hdr.timeout = 5000; // Timeout in milliseconds
+
+    if (ioctl(fd, SG_IO, &io_hdr) < 0)
+    {
+        perror("SCSI REPORT ELEMENT STATUS command failed");
+        return IO_ERR;
+    }
+
+    if ((io_hdr.info & SG_INFO_OK_MASK) != SG_INFO_OK)
+    {
+        std::cerr << "SCSI 命令执行错误" << std::endl;
+        if (io_hdr.sb_len_wr > 0)
+        {
+            std::cerr << "Sense Data 错误码: ";
+            CScsiDrive::print_sense_buffer(sense_buffer, io_hdr.sb_len_wr); // 输出 Sense Buffer
+        }
+        close(fd);
+        return 1;
+    }
+    close(fd);
     return 0;
 }
 

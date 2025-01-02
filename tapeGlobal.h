@@ -7,6 +7,6 @@
 #include "scsiLibrary.h"
 #include "scsiDrive.h"
 
-CScsiLibrary* initLibraryList(int LibraryIndex);
+CScsiLibrary* GetLibraryIndex(int LibraryIndex);
 
 #endif //UNTITLED13_TAPEGLOBAL_H

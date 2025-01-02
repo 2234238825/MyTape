@@ -1,48 +1,168 @@
+/**
+* @file     	main.cpp
+* @author   	huhh
+* @email   	2234238825@qq.com
+* @version	V1.0
+* @date    	24-NOV-2014
+* @license  	GNU General Public License (GPL)
+* @brief   	Universal Synchronous/Asynchronous Receiver/Transmitter
+* @detail		detail
+* @attention
+*  This file is part of OST.                                                    \n
+*  This program is free software; you can redistribute it and/or modify 		\n
+*  it under the terms of the GNU General Public License version 3 as 		    \n
+*  published by the Free Software Foundation.                               	\n
+*  You should have received a copy of the GNU General Public License   		    \n
+*  along with OST. If not, see <http://www.gnu.org/licenses/>.       			\n
+*  Unless required by applicable law or agreed to in writing, software       	\n
+*  distributed under the License is distributed on an "AS IS" BASIS,         	\n
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  	\n
+*  See the License for the specific language governing permissions and     	    \n
+*  limitations under the License.   											\n
+*   																			\n
+* @htmlonly
+* <span style="font-weight: bold">History</span>
+* @endhtmlonly
+* Version|Auther|Date|Describe
+* ------|----|------|--------
+* V3.3|Jones Lee|07-DEC-2017|Create File
+* <h2><center>&copy;COPYRIGHT 2017 WELLCASA All Rights Reserved.</center></h2>
+*/
 
-
-#include <fstream>
 #include "scsiExcute.h"
 #include "tapeGlobal.h"
-
+#include <thread>
 #include <iostream>
-#include <set>
 #include <functional>
+
 using namespace std;
+#define path "/dev/sg4"
+#define test cout<<"test"<<endl;
+CScsiLibrary *LibManger;
 
-
-namespace i2soft
-{
-
-// CMapSingleton: A general singleton implementation with keys
-// i.e. given an identical key, there is only one instance
-    template<typename KeyType, typename ValueType>
-    class CMapSingleton
-    {
-    };
-}
-
-namespace i2soft
-{
-    using DbManager = CMapSingleton<std::string, int>;
-}
+int backup(int driveIndex, int slotIndex);
 
 int main()
 {
-    CScsiLibrary *LibManger = initLibraryList(0);
-    LibManger->move_medium(1,1,MOVE_FROM_SLOT_TO_DRIVE);
+    int driveIndex = 0, slotIndex = 0;
+    LibManger = GetLibraryIndex(0);
 
-    CScsiDrive *iDrive = LibManger->getDrive(1);
-    cout<<iDrive->getDrivePath()<<endl;
+    /*thread th1(backup, driveIndex, slotIndex);
+    th1.join();*/
+    return 0;
+}
 
-    iDrive->set_scsi_block_size();
-    iDrive->rewind();
+int backup(int driveIndex, int slotIndex)
+{
+    int ret, pos = 0;
+    CScsiDrive *iDrive = LibManger->getDrive(driveIndex);
+    if(!iDrive)
+    {
+        cout<<"get null drive "<<driveIndex<<endl;
+        return -1;
+    }
+    //   ret = LibManger->move_medium(slotIndex, driveIndex, MOVE_FROM_SLOT_TO_DRIVE);
+    if(ret)
+    {
+        Log(ERROR_LEVEL,"move tape failed from slot %d to drive %d",slotIndex,driveIndex);
+    }
+    char buf[WRITE_BUFFER_SIZE] = {};
+    TapeHeader tapeHeader{"huhh", 0, 0x1234567, 20241226, 0};
+    memcpy(buf, &tapeHeader, sizeof(TapeHeader));
+    ret = iDrive->rewind();
+    if(ret)
+    {
+        Log(ERROR_LEVEL,"rewind failed");
+        return ret;
+    }
+    ret = iDrive->write_block(buf,1);
+    if(ret)
+    {
+        Log(ERROR_LEVEL,"write block failed");
+        return ret;
+    }
+    ret = iDrive->scsi_write_fileMarks();
+    if(ret)
+    {
+        Log(ERROR_LEVEL,"write fileMark failed");
+        return ret;
+    }
+    ret = iDrive->scsi_read_pos(pos);
+    if(ret)
+    {
+        Log(ERROR_LEVEL,"read tape position failed");
+        return ret;
+    }
+    cout<<pos<<endl;
+    return 0;
+}
 
+/**
+* @brief		can send the message
+* @param[in]	canx : The Number of CAN
+* @param[in]	id : the can id
+* @param[in]	p : the data will be sent
+* @param[in]	size : the data size
+* @param[in]	is_check_send_time : is need check out the time out
+* @note	Notice that the size of the size is smaller than the size of the buffer.
+* @return
+*	+1 Send successfully \n
+*	-1 input parameter error \n
+*	-2 canx initialize error \n
+*	-3 canx time out error \n
+* @par Sample
+* @code
+*	u8 p[8] = {0};
+*	res_ res = 0;
+* 	res = can_send_msg(CAN1,1,p,0x11,8,1);
+* @endcode
+*/
+int space_blocks(int ulBlocks)
+{
+    int fd = open(path, O_RDWR);
+    if (fd < 0)
+    {
+        return -1;
+    }
 
-    iDrive->write_block(nullptr,1);
-    iDrive->rewind();
+    // SCSI SPACE command (CDB = 0x11)
+    unsigned char cdb[6] = {0x11, 0x00, 0x00, 0x00, 0x01, 0x00};
+    // 0x00 in cdb[1] means SPACE by blocks, cdb[4:2] specifies the number of blocks to skip.
+    cdb[2] = ulBlocks >> 16;
+    cdb[3] = ulBlocks >> 8;
+    cdb[4] = ulBlocks;
+    // SCSI generic (SG) I/O structure
+    sg_io_hdr_t io_hdr;
+    memset(&io_hdr, 0, sizeof(sg_io_hdr_t));
 
-    iDrive->read_block(nullptr,1);
-    LibManger->move_medium(1,1,MOVE_FROM_DRIVE_TO_SLOT);
+    unsigned char sense_buffer[32]; // Buffer to store sense data
+
+    // Configure the SCSI command
+    io_hdr.interface_id = 'S'; // Always 'S'
+    io_hdr.cmd_len = sizeof(cdb); // Command length
+    io_hdr.mx_sb_len = sizeof(sense_buffer); // Maximum sense buffer length
+    io_hdr.dxfer_direction = SG_DXFER_NONE; // No data transfer for SPACE command
+    io_hdr.cmdp = cdb; // Pointer to the CDB
+    io_hdr.sbp = sense_buffer; // Pointer to sense buffer
+    io_hdr.timeout = 5000; // Timeout in milliseconds
+
+    if (ioctl(fd, SG_IO, &io_hdr) < 0)
+    {
+        perror("SCSI REPORT ELEMENT STATUS command failed");
+        return IO_ERR;
+    }
+
+    if ((io_hdr.info & SG_INFO_OK_MASK) != SG_INFO_OK)
+    {
+        std::cerr << "SCSI 命令执行错误" << std::endl;
+        if (io_hdr.sb_len_wr > 0)
+        {
+            std::cerr << "Sense Data 错误码: ";
+            CScsiDrive::print_sense_buffer(sense_buffer, io_hdr.sb_len_wr); // 输出 Sense Buffer
+        }
+        close(fd);
+        return 1;
+    }
     return 0;
 }
 

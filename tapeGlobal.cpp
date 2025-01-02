@@ -4,10 +4,9 @@
 #include <cstring>
 #include "tapeGlobal.h"
 
-/*
+/*!
  * 这个源文件是初始用于初始化磁带库的全局变量，所有的全局变量都应放在这里面。
  * 主要的有两个类：CScsiLibrary 和 CScsiDrive.
- *
  */
 
 vector<CScsiLibrary*> gv_scsiLibrary;
@@ -101,6 +100,11 @@ char* Skip(char* pBuf, char c, int nSkip)
     return p;
 }
 
+/*!
+ * @param DeviceCommandStruct
+ * @return Ercode
+ * @note 将设备路径放、ABSL等信息入vector<SCSI_COMMAND_STRUCT>中
+ */
 int LinuxScanSCSI(vector<SCSI_COMMAND_STRUCT> *DeviceCommandStruct)
 {
     FILE* fp = fopen("/proc/scsi/sg/devices", "r");
@@ -209,10 +213,10 @@ int FindBackupDevice()
     }
     return 0;
 }
-/*
- *  将磁带库对应的驱动器放进去，将磁带库，slot数量，tapes条形码和设备序列号都初始化完成。
+/*!
+ *  @note 将磁带库对应的驱动器放进去，将磁带库，slot数量，tapes条形码和设备序列号都初始化完成。
  */
-CScsiLibrary* initLibraryList(int LibraryIndex)
+CScsiLibrary* GetLibraryIndex(int LibraryIndex)
 {
     int ret = FindBackupDevice();
     if(ret)
@@ -255,7 +259,6 @@ CScsiLibrary* initLibraryList(int LibraryIndex)
                 {
                     if(strcmp(iSerialNumberPtr,gv_scsiDrive[i]->getDriveSerialNumber()) == 0) //驱动器和带库匹配成功
                     {
-                        cout<<"w:"<<iSerialNumberPtr<<endl;
                         gv_scsiLibrary[LibraryIndex]->setCScsiDrive(gv_scsiDrive[i]);
                         iDriveElementAddr++;
                         iFlag = 1;

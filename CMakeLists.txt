@@ -20,5 +20,7 @@ add_executable(untitled13
         SCSIBase.cpp
         Catalog.cpp
         Catalog.h
+        utils/BytePacker.cpp
+        utils/BytePacker.h
 )
 #target_link_libraries(untitled13 libevent::core)

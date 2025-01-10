@@ -272,5 +272,6 @@ CScsiLibrary* GetLibraryIndex(int LibraryIndex)
                 break;
         }
     }
+    gv_scsiLibrary[LibraryIndex]->initAllSlot(); //获取slot的磁带条形码。
     return gv_scsiLibrary[LibraryIndex];
 }

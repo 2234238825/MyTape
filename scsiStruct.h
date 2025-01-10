@@ -247,7 +247,7 @@ struct   ELEMENT_DESCRIPTOR
 #define  VENDOR_ID_MAX_LENGTH    8
 #define  PRODUCT_ID_MAX_LENGTH   16
 
-#define  BARCODE_LENGTH	      32
+#define  BARCODE_LENGTH	      36
 #define  SERIAL_NO_LENGTH     20
 
 

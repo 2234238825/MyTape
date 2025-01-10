@@ -134,7 +134,7 @@ int CScsiDrive::write_block(char *buffer,int blocks)
         return 1;
     }
 
-    std::cout << "成功写入 " << WRITE_BUFFER_SIZE*blocks  << " 字节到磁带设备" << std::endl;
+    std::cout << "成功写入 " << blocks  << " 个块到磁带设备" << std::endl;
 
     // 关闭设备
     close(fd);

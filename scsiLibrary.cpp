@@ -283,23 +283,18 @@ int CScsiLibrary::move_medium(int source_element, int destination_element, int i
     return 0;
 }
 
-
+/*!
+ * @warning 响应数据是堆内存，但是随时会被清空，不能将设备信息的指针指向它。
+ */
 int CScsiLibrary::print_response_data(int cdb_code,int page_code)
 {
-    printf("[cdb_code:%d,page_code:%d] responseBuffer:\n",cdb_code,page_code);
+  //  printf("[cdb_code:%d,page_code:%d] responseBuffer:\n",cdb_code,page_code);
     if(cdb_code == 0xb8)
     {
-        int usAdder = m_CommandStruct.responseBuffer[3];
-        //cout<<"Element Status Header(First Element Address Reported, Number of Elements Available,Reserved,Byte Count of Report Available)\n";
-        for (int i = 0; i < m_CommandStruct.responseBufferLength; ++i)
+/*        for (int i = 0; i < m_CommandStruct.responseBufferLength; ++i)
             std::cout <<  hex<<(int)m_CommandStruct.responseBuffer[i] << " ";
-
-        cout<<endl;
-        cout<<m_CommandStruct.responseBuffer+92<<endl;
-
-        std::cout << std::dec << std::endl;
         std::cout<<"Primary Volume Tag Information:"<<endl;
-        std::cout<<m_DeviceStatus.descriptor->szVolTag<<endl;
+        std::cout<<m_DeviceStatus.descriptor->szVolTag<<endl;*/
     }
     if(cdb_code == 0x1d)
     {
@@ -452,7 +447,21 @@ const char *CScsiLibrary::GetLibrarySerialNumber()
 
 int CScsiLibrary::initAllSlot()
 {
-    read_element_status(0x02,m_ElementStruct.addr_slot,m_ElementStruct.num_slot,0,true);
+    slotInfo.reserve(m_ElementStruct.num_slot);
+    for(int i = 0;i<m_ElementStruct.num_slot;i++)
+    {
+        read_element_status(0x02,m_ElementStruct.addr_slot + i,m_ElementStruct.num_slot,0,true);
+        TapeInfo *tapeInfo = new TapeInfo;
+        memcpy(tapeInfo->szBarCode,m_DeviceStatus.descriptor->szVolTag,BARCODE_LENGTH);
+        strtok(tapeInfo->szBarCode," "); //scsi命令读出来的时候末尾补 32(space), 此处将32替换为 '\0'
+        slotInfo.push_back(tapeInfo);
+    }
+
     return 0;
+}
+
+TapeInfo* CScsiLibrary::getSlotInfo(int slotIndex)
+{
+    return slotInfo[slotIndex];
 }
 

@@ -31,24 +31,31 @@
 
 #include "scsiExcute.h"
 #include "tapeGlobal.h"
+#include "LibraryInterface.h"
 #include <thread>
+#include "BytePacker.h"
 #include <iostream>
 #include <functional>
-
+#include <queue>
 using namespace std;
 #define path "/dev/sg4"
 #define test cout<<"test"<<endl;
 CScsiLibrary *LibManger;
 
-int backup(int driveIndex, int slotIndex);
-
 int main()
 {
-    int driveIndex = 0, slotIndex = 0;
-    LibManger = GetLibraryIndex(0);
 
-    /*thread th1(backup, driveIndex, slotIndex);
-    th1.join();*/
+    int p = 10;
+    const char *str = "hello, world";
+
+    int driveIndex = 0, slotIndex = 0;
+    //LibManger = GetLibraryIndex(0);
+    LibraryInterface libraryInterface(0);
+    char pPath[64] = "/data";
+    libraryInterface.CreateBackupTask(pPath,0);
+
+ /*   thread th1(backup, driveIndex, slotIndex);
+    th1.join();  */
     return 0;
 }
 
@@ -64,7 +71,7 @@ int backup(int driveIndex, int slotIndex)
     //   ret = LibManger->move_medium(slotIndex, driveIndex, MOVE_FROM_SLOT_TO_DRIVE);
     if(ret)
     {
-        Log(ERROR_LEVEL,"move tape failed from slot %d to drive %d",slotIndex,driveIndex);
+        Log(ERROR_LEVEL,"move tape failed from slot %d to drive %d",slotIndex, driveIndex);
     }
     char buf[WRITE_BUFFER_SIZE] = {};
     TapeHeader tapeHeader{"huhh", 0, 0x1234567, 20241226, 0};
@@ -166,6 +173,29 @@ int space_blocks(int ulBlocks)
     return 0;
 }
 
+void f()
+{
+    CBytePacker packer;
+    packer.PackInt(42);
+    packer.PackFloat(3.14f);
+    packer.PackString("Hello, World!");
+
+    // Retrieve the packed buffer
+    const auto& buffer = packer.GetBuffer();
+
+    // Create a byte unpacker with the packed data
+    CByteUnpacker unpacker(buffer);
+
+    // Unpack the data
+    int intValue = unpacker.UnpackInt();
+    float floatValue = unpacker.UnpackFloat();
+    std::string strValue = unpacker.UnpackString();
+
+    // Print unpacked values
+    std::cout << "Unpacked Integer: " << intValue << std::endl;
+    std::cout << "Unpacked Float: " << floatValue << std::endl;
+    std::cout << "Unpacked String: " << strValue << std::endl;
+}
 /*******************命名规则********************/
 // 类 的名称以大写字母“C”开头，表明定义的是类，后跟一个或多个单词。为便于界定，每个单词的首字母要大写。类的命名推荐用"名词"或"形容词＋名词"的形式。
 // 结构体 大写+下划线表示。

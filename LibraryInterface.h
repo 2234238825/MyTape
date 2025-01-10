@@ -14,19 +14,31 @@ class LibraryInterface
 public:
     LibraryInterface(int IndexOfLibrary)
     {
-            m_Library = GetLibraryIndex(IndexOfLibrary);
+        m_Library = GetLibraryIndex(IndexOfLibrary);
+
+        m_iBlockSize = 65536;
+        m_statisticsBlocks = 0;
     };
     int WriteTapeHeader();
-    int Write(int buf, int len);
+    int Produce(char* buf, int len);
     int AppendFile(char* pFileName, LONGLONG llFileLength, void* pFileAttr);
     int CreateBackupTask(char *rootPath, int iFileAttrlen);
+    int StartFileBackupTask(char *pPath);
+    int WriteBlock(char* pBuffer, int pBlocks);
+    int SetFileLength(char* pFileName, LONGLONG llFileLength);
 private:
     CScsiLibrary *m_Library;
+    CScsiDrive *m_Drive;
     int m_iBlockSize;
+    int m_ulTapeBlock;
     int m_iDataLen;
     char *m_pBuffer;
     CCatalog m_iCatalog;
-
+    TapeHeader m_TapeHeader;
+    TapeInfo *m_tapeInfo;
+    int m_iFileAttrLen;
+    int m_iTotalLen;
+    int m_statisticsBlocks;
 };
 
 

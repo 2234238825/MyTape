@@ -5,6 +5,8 @@
 #ifndef UNTITLED13_KFCSTRUCT_H
 #define UNTITLED13_KFCSTRUCT_H
 #include <cstring>
+#include <sys/stat.h>
+#include <unistd.h>
 #include "OSAPI.h"
 #include "scsiStruct.h"
 using namespace std;

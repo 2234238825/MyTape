@@ -60,6 +60,7 @@ public:
     CScsiDrive * getDrive(int iIndexDrive);
     const char* GetLibrarySerialNumber();
 
+    TapeInfo* getSlotInfo(int slotIndex);
     int initAllSlot();
 private:
     void print_sense_buffer(unsigned char* sense_buffer, int len);
@@ -74,6 +75,7 @@ private:
     ELEMENT_STRUCT m_ElementStruct;
     DEVICE_STATUS m_DeviceStatus;
     vector<CScsiDrive *> m_Drives;
+    vector<TapeInfo*> slotInfo;
 
     DEVICE_INFO m_DeviceInfo;
     char m_LibrarySerialNumber[SERIAL_NO_LENGTH];

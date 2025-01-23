@@ -111,32 +111,39 @@ int LibraryInterface::AppendFile(char *pFileName, long long int llFileLength, vo
  * @note 如果是空白磁带，倒带，写磁带头, 写磁带文件。 \n
  *       如果不是空白磁带，seekToTapeEnd,首先看看有没正常的结束标记，没有就加上。\n
  *       将SessionHeader传入m_pBuffer。                     \n
- *
- *
  */
 
 int LibraryInterface::CreateBackupTask(char *rootPath, int iFileAttrlen)
 {
-    TapeInfo *iTapeInfo = m_Library->getSlotInfo(0);
+
     m_Drive = m_Library->getDrive(0);
+    TapeInfo *iTapeInfo = m_Drive->getTapeInfo();
 
     m_Drive->rewind();
-
     iTapeInfo->iSequence = 0;
+
+
     m_pBuffer = new char[BUF_SIZE];
+
     SessionHeader* pSessHeader = (SessionHeader * )m_pBuffer;
     memcpy(pSessHeader->szRootpath,rootPath,FILE_PATH_LEN);
-    CatalogHeader catalogHeader;
+
+
+    m_Drive->scsi_read_pos(m_ulTapeBlock);
+
     char szPath[FILE_PATH_LEN];
     sprintf(szPath, "meta%c%s%cCatalog_%u_%u", SLASH,iTapeInfo->szBarCode, SLASH, m_TapeHeader.iSequence, m_ulTapeBlock);
-    Log(DEBUG_LEVEL,"meta data path: %s", szPath);
     int ret = CFile::CreateFolder(szPath);
     if(ret)
     {
         Log(ERROR_LEVEL,"create folder failed:%s",szPath);
     }
-    m_iCatalog.SetCatalogName(szPath, &catalogHeader);
 
+    CatalogHeader catalogHeader{};
+    memcpy(catalogHeader.szRootpath,rootPath,FILE_PATH_LEN);
+    catalogHeader.iSequence = 0;
+    catalogHeader.iSignature = 0013156;
+    m_iCatalog.SetCatalogName(szPath, &catalogHeader);
     StartFileBackupTask(rootPath);
     return 0;
 }

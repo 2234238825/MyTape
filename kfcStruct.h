@@ -18,7 +18,7 @@ using namespace std;
 
 #define HEADER_LEN (64*1024)
 #define APP_DEF_LEN (32*1024)
-#define FILE_PATH_LEN 2048
+#define FILE_PATH_LEN 1024
 
 #define BUF_SIZE (2*1024*1024)
 

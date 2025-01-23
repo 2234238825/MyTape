@@ -104,8 +104,8 @@ CScsiLibrary::read_element_status(char element_type, int starting_element_addres
     }
 
     m_DeviceStatus.status_header = (ELEMENT_STATUS_HEADER *)m_CommandStruct.responseBuffer;
-    m_DeviceStatus.page_header = (ELEMENT_STATUS_PAGE *)(m_CommandStruct.responseBuffer + 8);
-    m_DeviceStatus.descriptor = (ELEMENT_DESCRIPTOR *)(m_CommandStruct.responseBuffer + 8 + sizeof(ELEMENT_STATUS_PAGE));
+    m_DeviceStatus.page_header = (ELEMENT_STATUS_PAGE *)(m_CommandStruct.responseBuffer + sizeof(ELEMENT_STATUS_HEADER));
+    m_DeviceStatus.descriptor = (ELEMENT_DESCRIPTOR *)(m_CommandStruct.responseBuffer + sizeof(ELEMENT_STATUS_HEADER)+ sizeof(ELEMENT_STATUS_PAGE));
 
     print_response_data(0xb8);
     return 0;
@@ -291,10 +291,10 @@ int CScsiLibrary::print_response_data(int cdb_code,int page_code)
   //  printf("[cdb_code:%d,page_code:%d] responseBuffer:\n",cdb_code,page_code);
     if(cdb_code == 0xb8)
     {
-/*        for (int i = 0; i < m_CommandStruct.responseBufferLength; ++i)
-            std::cout <<  hex<<(int)m_CommandStruct.responseBuffer[i] << " ";
+        /*for (int i = 0; i < m_CommandStruct.responseBufferLength; ++i)
+            std::cout <<  hex<<(int)m_CommandStruct.responseBuffer[i] << " ";*/
         std::cout<<"Primary Volume Tag Information:"<<endl;
-        std::cout<<m_DeviceStatus.descriptor->szVolTag<<endl;*/
+        std::cout<<m_DeviceStatus.descriptor->szVolTag<<endl;
     }
     if(cdb_code == 0x1d)
     {
@@ -432,7 +432,12 @@ const char *CScsiLibrary::get_response_buffer()
 
 void CScsiLibrary::setCScsiDrive(CScsiDrive *drive)
 {
-    m_Drives.emplace_back(drive);
+    int i = 0;
+    while(m_Drives.find(i) != m_Drives.end())
+    {
+        i++;
+    }
+    m_Drives.insert({i,drive});
 }
 
 CScsiDrive *CScsiLibrary::getDrive(int iIndexDrive)
@@ -445,23 +450,44 @@ const char *CScsiLibrary::GetLibrarySerialNumber()
     return m_LibrarySerialNumber;
 }
 
-int CScsiLibrary::initAllSlot()
+int CScsiLibrary::initSlotTape()
 {
-    slotInfo.reserve(m_ElementStruct.num_slot);
     for(int i = 0;i<m_ElementStruct.num_slot;i++)
     {
         read_element_status(0x02,m_ElementStruct.addr_slot + i,m_ElementStruct.num_slot,0,true);
         TapeInfo *tapeInfo = new TapeInfo;
         memcpy(tapeInfo->szBarCode,m_DeviceStatus.descriptor->szVolTag,BARCODE_LENGTH);
         strtok(tapeInfo->szBarCode," "); //scsi命令读出来的时候末尾补 32(space), 此处将32替换为 '\0'
-        slotInfo.push_back(tapeInfo);
+        m_slotInfo[i] = (tapeInfo);
     }
+    cout<<m_slotInfo[0]->szBarCode<<endl;
 
     return 0;
 }
 
 TapeInfo* CScsiLibrary::getSlotInfo(int slotIndex)
 {
-    return slotInfo[slotIndex];
+    if(m_slotInfo.find(slotIndex)  != m_slotInfo.end())
+    {
+        return m_slotInfo[slotIndex];
+    }
+    else return nullptr;
+}
+
+int CScsiLibrary::initDriveTape()
+{
+    for(int i = 0;i<m_Drives.size();i++)
+    {
+        read_element_status(RE_DT_ELEMENT,m_Drives[i]->getAddr(),1,0,true);
+
+        if(m_DeviceStatus.descriptor->szVolTag[0] != 0)
+        {
+            TapeInfo *tapeInfo = new TapeInfo;
+            memcpy(tapeInfo->szBarCode,m_DeviceStatus.descriptor->szVolTag,BARCODE_LENGTH);
+            strtok(tapeInfo->szBarCode," "); //scsi命令读出来的时候末尾补 32(space), 此处将32替换为 '\0'
+            m_Drives[i]->setTapeInfo(tapeInfo);
+        }
+    }
+    return 0;
 }
 

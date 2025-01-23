@@ -12,6 +12,7 @@
 #include "ErrorCode.h"
 #include "Log.h"
 #include "scsiDrive.h"
+#include <map>
 using namespace std;
 
 
@@ -61,7 +62,8 @@ public:
     const char* GetLibrarySerialNumber();
 
     TapeInfo* getSlotInfo(int slotIndex);
-    int initAllSlot();
+    int initSlotTape();
+    int initDriveTape();
 private:
     void print_sense_buffer(unsigned char* sense_buffer, int len);
     int new_buffer(int buffer_size);
@@ -74,8 +76,8 @@ private:
     SCSI_COMMAND_STRUCT m_CommandStruct;
     ELEMENT_STRUCT m_ElementStruct;
     DEVICE_STATUS m_DeviceStatus;
-    vector<CScsiDrive *> m_Drives;
-    vector<TapeInfo*> slotInfo;
+    map<int, CScsiDrive*> m_Drives;
+    map<int,TapeInfo*> m_slotInfo;
 
     DEVICE_INFO m_DeviceInfo;
     char m_LibrarySerialNumber[SERIAL_NO_LENGTH];

@@ -218,7 +218,7 @@ int CScsiDrive::read_block(char *buffer, int blocks)
     return 0;
 }
 
-int CScsiDrive::get_query()
+int CScsiDrive::setSerialNumber()
 {
     // 打开设备
     int fd = open(m_CommandStruct.devicePath, O_RDWR);
@@ -273,7 +273,7 @@ int CScsiDrive::get_query()
         close(fd);
         return 1;
     }
-
+    memcpy(m_SerialNumber,m_CommandStruct.responseBuffer+4,SERIAL_NO_LENGTH);
     print_response_data(0x12,0x80);
     // 关闭设备
     close(fd);
@@ -318,7 +318,6 @@ int CScsiDrive::print_response_data(int cdb_code,int page_code)
         else if(page_code == 0x80)
         {
             std::cout<<m_CommandStruct.devicePath<<" Data Trans Device Serial Number:"<<m_CommandStruct.responseBuffer+4<<std::endl;
-            memcpy(m_SerialNumber,m_CommandStruct.responseBuffer+4,SERIAL_NO_LENGTH);
         }
 
     }
@@ -357,7 +356,7 @@ const char *CScsiDrive::getDriveSerialNumber()
 
 const char *CScsiDrive::getDrivePath()
 {
-    return m_DrivePath;
+    return m_CommandStruct.devicePath;
 }
 
 int CScsiDrive::rewind()
@@ -519,7 +518,7 @@ int CScsiDrive::scsi_read_pos(int &ulposition)
     int fd = open(m_CommandStruct.devicePath, O_RDWR);
     if (fd < 0)
     {
-        perror("Failed to open tape device");
+        Log(ERROR_LEVEL,"Failed to open tape device %s",m_CommandStruct.devicePath);
         return -1;
     }
 
@@ -527,10 +526,6 @@ int CScsiDrive::scsi_read_pos(int &ulposition)
     unsigned char cdb[10] = {};
     unsigned char sense_buffer[32] = {};
     unsigned char response_buffer[80] = {};
-
-    memset(&io_hdr, 0, sizeof(io_hdr));
-    memset(cdb, 0, sizeof(cdb));
-    memset(sense_buffer, 0, sizeof(sense_buffer));
 
     cdb[0] = 0x34;
     cdb[1] = 0x00;
@@ -643,7 +638,7 @@ int CScsiDrive::scsi_write_fileMarks()
     return 0;
 }
 
-int CScsiDrive::scsi_test_unit_raedy()
+int CScsiDrive::scsi_test_unit_ready()
 {
     int fd = open(m_CommandStruct.devicePath, O_RDWR);
     if (fd < 0)
@@ -691,5 +686,27 @@ int CScsiDrive::scsi_test_unit_raedy()
     }
     close(fd);
     return 0;
+}
+
+TapeInfo *CScsiDrive::getTapeInfo()
+{
+    if(m_tapeInfo != nullptr)
+        return m_tapeInfo;
+    else return nullptr;
+}
+
+void CScsiDrive::setTapeInfo(TapeInfo *tapeInfo)
+{
+    m_tapeInfo = tapeInfo;
+}
+
+void CScsiDrive::setAddr(int addr)
+{
+    m_DriveAddr = addr;
+}
+
+int CScsiDrive::getAddr()
+{
+    return m_DriveAddr;
 }
 

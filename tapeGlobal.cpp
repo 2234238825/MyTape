@@ -206,7 +206,7 @@ int FindBackupDevice()
         {
             CScsiDrive *globalScsiDrive = new CScsiDrive;
             globalScsiDrive->setDeviceCommandStructAndDeviceInfo(scsiCommandStruct[i],deviceInfo);
-            globalScsiDrive->get_query();  //获取序列号
+            globalScsiDrive->setSerialNumber();  //获取序列号
 
             gv_scsiDrive.emplace_back(globalScsiDrive);
         }
@@ -259,6 +259,7 @@ CScsiLibrary* GetLibraryIndex(int LibraryIndex)
                 {
                     if(strcmp(iSerialNumberPtr,gv_scsiDrive[i]->getDriveSerialNumber()) == 0) //驱动器和带库匹配成功
                     {
+                        gv_scsiDrive[i]->setAddr(iDriveElementAddr);
                         gv_scsiLibrary[LibraryIndex]->setCScsiDrive(gv_scsiDrive[i]);
                         iDriveElementAddr++;
                         iFlag = 1;
@@ -272,6 +273,7 @@ CScsiLibrary* GetLibraryIndex(int LibraryIndex)
                 break;
         }
     }
-    gv_scsiLibrary[LibraryIndex]->initAllSlot(); //获取slot的磁带条形码。
+    gv_scsiLibrary[LibraryIndex]->initDriveTape(); //获取slot的磁带条形码。
+
     return gv_scsiLibrary[LibraryIndex];
 }

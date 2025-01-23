@@ -4,10 +4,6 @@
 
 #ifndef UNTITLED13_MYFUNTION_H
 #define UNTITLED13_MYFUNTION_H
-namespace caps
-{
-
-}
 
 
 #endif //UNTITLED13_MYFUNTION_H

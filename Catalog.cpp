@@ -4,7 +4,7 @@
 
 #include "Catalog.h"
 #include "Log.h"
-#include <string.h>
+#include <cstring>
 
 CCatalog::CCatalog()
 {

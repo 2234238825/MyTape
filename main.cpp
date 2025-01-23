@@ -29,6 +29,7 @@
 * <h2><center>&copy;COPYRIGHT 2017 WELLCASA All Rights Reserved.</center></h2>
 */
 
+
 #include "scsiExcute.h"
 #include "tapeGlobal.h"
 #include "LibraryInterface.h"
@@ -37,25 +38,61 @@
 #include <iostream>
 #include <functional>
 #include <queue>
+
 using namespace std;
 #define path "/dev/sg4"
-#define test cout<<"test"<<endl;
 CScsiLibrary *LibManger;
+
+struct UsIoOption
+{
+    void SetFromRule(const std::string &ruleUuid,
+                     const std::string &type,
+                     int a,
+                     std::string tapePoolName,
+                     const std::string &library_sn,
+                     std::vector<std::string> &driver_sn,
+                     std::vector<int> &tape_for_use,
+                     const std::string &storageIp, int32_t dedupEnd,
+                     int tape_read_type = 1)
+    {
+        return;
+    }
+};
 
 int main()
 {
+    UsIoOption io;
+    string s;
+    vector<string>ss;
+    vector<string>null1, null2;
+    vector<int>s1;
+    io.SetFromRule(s, s, 2, NULL, NULL,ss,s1,NULL,NULL);
+    /*CCatalog Catalog;
+    char catalogPath[] = "meta/ttt100L1/Catalog_0_0";
+    Catalog.SetCatalogName(catalogPath);
+    cout<<Catalog.IsOpen()<<endl;
+    cout<<Catalog.GetDetailFileCount()<<endl;
+    CatalogHeader *catalogHeader = Catalog.GetSessInfo();
+    cout<<catalogHeader->szRootpath<<endl;
+
+    return 0; */
+
 
     int p = 10;
     const char *str = "hello, world";
 
     int driveIndex = 0, slotIndex = 0;
     //LibManger = GetLibraryIndex(0);
+
     LibraryInterface libraryInterface(0);
     char pPath[64] = "/data";
-    libraryInterface.CreateBackupTask(pPath,0);
+    libraryInterface.CreateBackupTask(pPath, 0);
 
- /*   thread th1(backup, driveIndex, slotIndex);
-    th1.join();  */
+    /* thread th1(backup, driveIndex, slotIndex);
+     *
+       th1.join();
+     */
+
     return 0;
 }
 
@@ -63,44 +100,44 @@ int backup(int driveIndex, int slotIndex)
 {
     int ret, pos = 0;
     CScsiDrive *iDrive = LibManger->getDrive(driveIndex);
-    if(!iDrive)
+    if (!iDrive)
     {
-        cout<<"get null drive "<<driveIndex<<endl;
+        cout << "get null drive " << driveIndex << endl;
         return -1;
     }
     //   ret = LibManger->move_medium(slotIndex, driveIndex, MOVE_FROM_SLOT_TO_DRIVE);
-    if(ret)
+    if (ret)
     {
-        Log(ERROR_LEVEL,"move tape failed from slot %d to drive %d",slotIndex, driveIndex);
+        Log(ERROR_LEVEL, "move tape failed from slot %d to drive %d", slotIndex, driveIndex);
     }
     char buf[WRITE_BUFFER_SIZE] = {};
     TapeHeader tapeHeader{"huhh", 0, 0x1234567, 20241226, 0};
     memcpy(buf, &tapeHeader, sizeof(TapeHeader));
     ret = iDrive->rewind();
-    if(ret)
+    if (ret)
     {
-        Log(ERROR_LEVEL,"rewind failed");
+        Log(ERROR_LEVEL, "rewind failed");
         return ret;
     }
-    ret = iDrive->write_block(buf,1);
-    if(ret)
+    ret = iDrive->write_block(buf, 1);
+    if (ret)
     {
-        Log(ERROR_LEVEL,"write block failed");
+        Log(ERROR_LEVEL, "write block failed");
         return ret;
     }
     ret = iDrive->scsi_write_fileMarks();
-    if(ret)
+    if (ret)
     {
-        Log(ERROR_LEVEL,"write fileMark failed");
+        Log(ERROR_LEVEL, "write fileMark failed");
         return ret;
     }
     ret = iDrive->scsi_read_pos(pos);
-    if(ret)
+    if (ret)
     {
-        Log(ERROR_LEVEL,"read tape position failed");
+        Log(ERROR_LEVEL, "read tape position failed");
         return ret;
     }
-    cout<<pos<<endl;
+    cout << pos << endl;
     return 0;
 }
 
@@ -181,7 +218,7 @@ void f()
     packer.PackString("Hello, World!");
 
     // Retrieve the packed buffer
-    const auto& buffer = packer.GetBuffer();
+    const auto &buffer = packer.GetBuffer();
 
     // Create a byte unpacker with the packed data
     CByteUnpacker unpacker(buffer);

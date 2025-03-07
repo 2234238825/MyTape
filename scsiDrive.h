@@ -28,7 +28,7 @@ public:
     int scsi_write_fileMarks();
     int scsi_test_unit_ready();
     int scsi_space_blocks(int ulBlocks);
-    int scsi_space_fileMarks(int ulnum);
+    int scsi_space_fileMarks(unsigned int ulnum);
     int scsi_read_pos(int &ulposition);
     int get_drive_block_size(int *block_size);
     int write_block(char *buffer, int blocks);

@@ -113,7 +113,8 @@ int LibraryInterface::AppendFile(char *pFileName, long long int llFileLength, vo
  *       将SessionHeader传入m_pBuffer。                     \n
  */
 
-int LibraryInterface::CreateBackupTask(char *rootPath, int iFileAttrlen)
+int LibraryInterface::
+CreateBackupTask(char *rootPath, int iFileAttrlen)
 {
 
     m_Drive = m_Library->getDrive(0);

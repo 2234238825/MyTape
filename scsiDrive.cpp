@@ -63,6 +63,7 @@ int CScsiDrive::set_scsi_block_size(unsigned int block_size)
         close(fd);
         return 1;
     }
+    close(fd);
     std::cout << "SCSI block size set to " << block_size << " bytes." << std::endl;
     return 0;
 }
@@ -463,7 +464,7 @@ int CScsiDrive::scsi_space_blocks(int ulBlocks)
     return 0;
 }
 
-int CScsiDrive::scsi_space_fileMarks(int ulnum)
+int CScsiDrive::scsi_space_fileMarks(unsigned int ulnum)
 {
     int fd = open(m_CommandStruct.devicePath, O_RDWR);
     if (fd < 0)
@@ -522,7 +523,7 @@ int CScsiDrive::scsi_read_pos(int &ulposition)
         return -1;
     }
 
-    struct sg_io_hdr io_hdr;
+    struct sg_io_hdr io_hdr = {};
     unsigned char cdb[10] = {};
     unsigned char sense_buffer[32] = {};
     unsigned char response_buffer[80] = {};
